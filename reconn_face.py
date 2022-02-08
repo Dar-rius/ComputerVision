@@ -4,49 +4,50 @@ import pickle
 import cv2
 import os
  
-#get paths of each file in folder named Images
-#Images here contains my data(folders of various persons)
+
+#Obtenir les paths de chaque fichier depuis le dossier Image qui
+#l'equivalent d'un dataset
 imagePaths = list(paths.list_images('Images'))
 knownEncodings = []
 knownNames = []
-# loop over the image paths
+
+# Boucle pour recuperer les paths des files
 for (i, imagePath) in enumerate(imagePaths):
-    # extract the person name from the image path
+    # extraire les labels depuis le nom de leur dossier
     name = imagePath.split(os.path.sep)[-2]
-    # load the input image and convert it from BGR (OpenCV ordering)
-    # to dlib ordering (RGB)
+    # charger les images en entree et les convertir en BGR (OpenCV ordering)
     image = cv2.imread(imagePath)
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    #Use Face_recognition to locate faces
+    #Utiliser face_recognition pour localiser les visages
     boxes = face_recognition.face_locations(rgb,model='hog')
-    # compute the facial embedding for the face
+    # encoder les visage
     encodings = face_recognition.face_encodings(rgb, boxes)
-    # loop over the encodings
+    # une boucle pour l'encodage des visages
     for encoding in encodings:
         knownEncodings.append(encoding)
         knownNames.append(name)
-#save emcodings along with their names in dictionary data
+#Enregistrer les visages encoder et les labels dans un dictionnaire
 data = {"encodings": knownEncodings, "names": knownNames}
-#use pickle to save data into a file for later use
+#Utiliser pickle pour enregistrer les donnees un file pour l'utiliser plus
+#tard lors de la detection de l'apppartenance du visage
 f = open("face_enc", "wb")
 f.write(pickle.dumps(data))
 f.close()
 
 
 
-#find path of xml file containing haarcascade file 
+#Trouver le path du fichier xml contenu dans le fichier haarcascade 
 cascPathface = os.path.dirname(
  cv2.__file__) + "/data/haarcascade_frontalface_alt2.xml"
-# load the harcaascade in the cascade classifier
+# charger les harcaascade dans le cascade classifier
 faceCascade = cv2.CascadeClassifier(cascPathface)
-# load the known faces and embeddings saved in last file
+# charger les donnees donnees du file "face_enc"
 data = pickle.loads(open('face_enc', "rb").read())
  
 print("Streaming started")
 video_capture = cv2.VideoCapture(0)
-# loop over frames from the video file stream
+
 while True:
-    # grab the frame from the threaded video stream
     ret, frame = video_capture.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = faceCascade.detectMultiScale(gray,
@@ -55,20 +56,19 @@ while True:
                                          minSize=(60, 60),
                                          flags=cv2.CASCADE_SCALE_IMAGE)
  
-    # convert the input frame from BGR to RGB 
+    # convertir les entree BRG en RGB
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # the facial embeddings for face in input
+    # encoder les donnees en entreee
     encodings = face_recognition.face_encodings(rgb)
     names = []
-    # loop over the facial embeddings incase
-    # we have multiple embeddings for multiple fcaes
+
     for encoding in encodings:
        #Compare encodings with encodings in data["encodings"]
        #Matches contain array with boolean values and True for the embeddings it matches closely
        #and False for rest
         matches = face_recognition.compare_faces(data["encodings"],
          encoding)
-        #set name =inknown if no encoding matches
+        #set name =Inconnu if no encoding matches
         name = "Inconnu"
         # check to see if we have found a match
         if True in matches:
